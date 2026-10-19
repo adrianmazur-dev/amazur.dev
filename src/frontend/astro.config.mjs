@@ -12,6 +12,9 @@ export default defineConfig({
         '/linkedin/profile': {
           target: 'http://127.0.0.1:8000',
         },
+        '/linkedin/experience': {
+          target: 'http://127.0.0.1:8000',
+        },
       },
     },
   },

@@ -148,9 +148,9 @@
 }
 
 .health-check:hover::before,
-.health-check:has([aria-pressed="true"])::before,
+.health-check:has([data-selected="true"])::before,
 .health-check:hover + .health-check::before,
-.health-check:has([aria-pressed="true"]) + .health-check::before {
+.health-check:has([data-selected="true"]) + .health-check::before {
   opacity: 0;
 }
 
@@ -170,12 +170,12 @@
   cursor: pointer;
 }
 
-.health-check-heading[aria-disabled="true"] {
+.health-check[data-available="false"] .health-check-heading {
   cursor: default;
 }
 
 .health-check-heading:hover,
-.health-check-heading[aria-pressed="true"] {
+.health-check-heading[data-selected="true"] {
   background: rgb(250 249 246 / 5%);
 }
 
@@ -298,7 +298,7 @@
   scrollbar-gutter: stable;
 }
 
-.health-refresh[aria-disabled="true"] {
+.health-refresh[data-loading="true"] {
   opacity: 0.45;
   cursor: progress;
 }

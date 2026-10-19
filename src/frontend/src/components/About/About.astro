@@ -4,7 +4,7 @@ import StageMarker from '../StageMarker/StageMarker.astro';
 import './About.css';
 ---
 
-<section class="about" data-about data-stage aria-labelledby="about-title">
+<section class="about" data-about data-stage>
   <StageMarker name="about" />
   <div class="about-content">
     <div class="about-copy">
@@ -53,7 +53,6 @@ import './About.css';
     };
 
     const loadProfile = async () => {
-      about.setAttribute('aria-busy', 'true');
       if (status) {
         status.textContent = 'Loading profile…';
         status.hidden = false;
@@ -80,8 +79,6 @@ import './About.css';
       } catch {
         if (status) status.textContent = 'My profile is temporarily unavailable. Please try again later.';
         if (retry) retry.hidden = false;
-      } finally {
-        about.setAttribute('aria-busy', 'false');
       }
     };
 

@@ -7,6 +7,23 @@ export interface LinkedInProfile {
   location: string | null;
 }
 
+export interface LinkedInExperience {
+  company_name: string | null;
+  title: string | null;
+  description: string | null;
+  location: string | null;
+  start_date: string | null;
+  end_date: string | null;
+}
+
+function isLinkedInExperience(value: unknown): value is LinkedInExperience {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+
+  const experience = value as Record<string, unknown>;
+  const fields = ['company_name', 'title', 'description', 'location', 'start_date', 'end_date'] as const;
+  return fields.every((field) => experience[field] === null || typeof experience[field] === 'string');
+}
+
 function isLinkedInProfile(value: unknown): value is LinkedInProfile {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
 
@@ -26,4 +43,19 @@ export async function getLinkedInProfile(): Promise<LinkedInProfile> {
   const profile: unknown = await response.json();
   if (!isLinkedInProfile(profile)) throw new Error('Invalid profile response');
   return profile;
+}
+
+export async function getLinkedInExperience(): Promise<LinkedInExperience[]> {
+  const response = await fetch('/linkedin/experience', {
+    headers: { Accept: 'application/json' },
+    cache: 'no-store',
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.ok) throw new Error(`Experience request failed: ${response.status}`);
+
+  const experience: unknown = await response.json();
+  if (!Array.isArray(experience) || !experience.every(isLinkedInExperience)) {
+    throw new Error('Invalid experience response');
+  }
+  return experience;
 }

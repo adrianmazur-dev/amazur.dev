@@ -6,10 +6,6 @@ import './Logo.css';
   <button
     class="intro-logo"
     type="button"
-    aria-label="Show system status"
-    aria-haspopup="dialog"
-    aria-expanded="false"
-    aria-controls="health-panel"
     data-intro-logo
     disabled
   >
@@ -17,15 +13,15 @@ import './Logo.css';
       loading="eager" fetchpriority="high" draggable="false" />
   </button>
 
-  <aside class="health-panel" id="health-panel" role="dialog" aria-labelledby="health-title" tabindex="-1"
+  <aside class="health-panel" id="health-panel" role="dialog" tabindex="-1"
     data-health-panel hidden>
     <header class="health-header">
       <div class="health-header-status">
         <h2 class="health-eyebrow" id="health-title">Behind the scenes</h2>
         <div class="health-header-actions">
           <span data-health-updated role="status">Not checked yet</span>
-          <button class="health-refresh" type="button" aria-label="Refresh service status" title="Refresh service status" data-health-refresh>
-            <svg class="health-icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+          <button class="health-refresh" type="button" title="Refresh service status" data-health-refresh>
+            <svg class="health-icon" width="16" height="16" viewBox="0 0 24 24">
               <path d="M3 11a9 9 0 0 1 15.36-6.36L21 7M21 3v4h-4" />
               <path d="M21 13a9 9 0 0 1-15.36 6.36L3 17M3 21v-4h4" />
             </svg>
@@ -36,14 +32,14 @@ import './Logo.css';
     </header>
     <p class="health-message" data-health-message role="status" hidden></p>
     <div class="health-content">
-      <ul class="health-checks" aria-label="Service checks" tabindex="0" data-health-checks hidden></ul>
-      <section class="health-details" id="health-details" aria-label="JSON" data-health-details>
+      <ul class="health-checks" tabindex="0" data-health-checks hidden></ul>
+      <section class="health-details" id="health-details" data-health-details>
         <h3 class="health-json-title health-json-title-mobile">JSON</h3>
         <pre tabindex="0"><code data-health-details-json></code></pre>
         <div class="health-details-footer">
           <span class="health-copy-feedback" data-health-copy-feedback role="status"></span>
-          <button class="health-copy" type="button" aria-label="Copy details JSON" title="Copy details JSON" data-health-copy disabled>
-            <svg class="health-icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+          <button class="health-copy" type="button" title="Copy details JSON" data-health-copy disabled>
+            <svg class="health-icon" width="16" height="16" viewBox="0 0 24 24">
               <rect x="9" y="9" width="12" height="12" rx="2" />
               <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
             </svg>
@@ -55,10 +51,10 @@ import './Logo.css';
 
   <template data-health-row>
     <li class="health-check">
-      <button class="health-check-heading" type="button" aria-pressed="false" aria-controls="health-details" data-check-trigger>
+      <button class="health-check-heading" type="button" data-selected="false" data-check-trigger>
         <span class="health-check-name" data-check-name></span>
         <span class="health-check-status">
-          <svg class="health-icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+          <svg class="health-icon" width="16" height="16" viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="9" />
             <path class="health-check-success" d="m8 12 3 3 5-6" />
             <path class="health-check-failure" d="m9 9 6 6m0-6-6 6" />
@@ -129,14 +125,14 @@ import './Logo.css';
       detailsJson.textContent = '';
       copyFeedback.textContent = '';
       copy.disabled = true;
-      checks.querySelectorAll('[aria-pressed]').forEach((button) => button.setAttribute('aria-pressed', 'false'));
+      checks.querySelectorAll<HTMLElement>('[data-check-trigger]').forEach((button) => { button.dataset.selected = 'false'; });
       requestPosition();
     };
 
     const scheduleDetailsClose = () => {
       cancelDetailsClose();
       detailsTimer = window.setTimeout(() => {
-        const selected = checks.querySelector('[aria-pressed="true"]');
+        const selected = checks.querySelector('[data-selected="true"]');
         if (selected?.matches(':hover, :focus-visible') || details.matches(':hover') || details.contains(document.activeElement)) return;
         hideDetails();
       }, 160);
@@ -153,11 +149,6 @@ import './Logo.css';
         if (item) item.dataset.available = String(check.available);
         if (name) name.textContent = labels.get(check.name) ?? check.name;
         if (state) state.textContent = check.available ? 'Operational' : 'Unavailable';
-        if (button && !check.available) {
-          button.setAttribute('aria-disabled', 'true');
-          button.removeAttribute('aria-pressed');
-          button.removeAttribute('aria-controls');
-        }
         const showDetails = () => {
           cancelDetailsClose();
           if (!check.available) {
@@ -167,8 +158,8 @@ import './Logo.css';
           if (selectedName === check.name) return;
           selectedName = check.name;
           selectionVersion++;
-          checks.querySelectorAll('[aria-pressed]').forEach((other) => other.setAttribute('aria-pressed', 'false'));
-          button?.setAttribute('aria-pressed', 'true');
+          checks.querySelectorAll<HTMLElement>('[data-check-trigger]').forEach((other) => { other.dataset.selected = 'false'; });
+          if (button) button.dataset.selected = 'true';
           detailsJson.textContent = JSON.stringify(check.details ?? {}, null, 2);
           detailsJson.parentElement?.scrollTo(0, 0);
           copyFeedback.textContent = '';
@@ -191,31 +182,26 @@ import './Logo.css';
     const loadHealth = async (force = false) => {
       if (trigger.disabled || loading || (!force && Date.now() - lastFetchedAt < cacheDuration)) return;
       loading = true;
-      panel.setAttribute('aria-busy', 'true');
       hideDetails();
       message.textContent = '';
       message.hidden = true;
       checks.hidden = true;
       updated.textContent = 'Checking…';
-      updated.removeAttribute('aria-label');
-      refresh.setAttribute('aria-disabled', 'true');
+      refresh.dataset.loading = 'true';
       requestPosition();
       try {
         renderChecks(await getHealthStatus());
         const time = new Intl.DateTimeFormat('en', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date());
         updated.textContent = time;
-        updated.setAttribute('aria-label', `Last checked at ${time}`);
       } catch {
         message.textContent = 'Could not check services. Please try again.';
         message.hidden = false;
         checks.hidden = true;
         updated.textContent = 'Check failed';
-        updated.removeAttribute('aria-label');
       } finally {
         lastFetchedAt = Date.now();
         loading = false;
-        panel.setAttribute('aria-busy', 'false');
-        refresh.setAttribute('aria-disabled', 'false');
+        refresh.dataset.loading = 'false';
         requestPosition();
       }
     };
@@ -226,7 +212,6 @@ import './Logo.css';
       cancelClose();
       panel.hidden = true;
       hideDetails();
-      trigger.setAttribute('aria-expanded', 'false');
       if (positionFrame !== null) window.cancelAnimationFrame(positionFrame);
       positionFrame = null;
     };
@@ -235,7 +220,6 @@ import './Logo.css';
       if (trigger.disabled) return;
       cancelClose();
       panel.hidden = false;
-      trigger.setAttribute('aria-expanded', 'true');
       positionPanel();
       void loadHealth();
     };
