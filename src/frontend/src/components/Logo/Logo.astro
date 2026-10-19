@@ -1,4 +1,5 @@
 ---
+import { settings } from '../../lib/config';
 import './Logo.css';
 ---
 
@@ -28,7 +29,10 @@ import './Logo.css';
           </button>
         </div>
       </div>
-      <h3 class="health-json-title">DETAILS</h3>
+      <div class="health-header-details">
+        <h3 class="health-json-title">DETAILS</h3>
+        <span class="health-version" data-health-version>{settings.appVersion}</span>
+      </div>
     </header>
     <p class="health-message" data-health-message role="status" hidden></p>
     <div class="health-content">

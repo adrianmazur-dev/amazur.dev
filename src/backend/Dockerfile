@@ -24,10 +24,13 @@ WORKDIR /app
 COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
 COPY --from=builder --chown=appuser:appuser /app/src /app/src
 
+ARG APP_VERSION=dev
+
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONPATH="/app/src" \
     PYTHONUNBUFFERED=1 \
-    DATABASE_URL="sqlite:////app/data/database.db"
+    DATABASE_URL="sqlite:////app/data/database.db" \
+    APP_VERSION=${APP_VERSION}
 
 USER appuser
 

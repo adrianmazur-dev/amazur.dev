@@ -192,6 +192,8 @@ jobs:
           context: src/${{ matrix.service }}
           file: src/${{ matrix.service }}/Dockerfile
           push: true
+          build-args: |
+            APP_VERSION=${{ needs.release.outputs.version_tag }}
           tags: |
             ${{ needs.release.outputs.image_prefix }}/${{ matrix.service }}:${{ needs.release.outputs.version_tag }}
             ${{ needs.release.outputs.image_prefix }}/${{ matrix.service }}:latest

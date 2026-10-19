@@ -14,6 +14,8 @@ RUN npm run build && npm prune --omit=dev
 
 FROM node:24-alpine AS runtime
 
+ARG APP_VERSION=dev
+
 WORKDIR /app
 
 COPY --from=builder --chown=node:node /app/dist ./dist
@@ -22,7 +24,8 @@ COPY --from=builder --chown=node:node /app/package.json ./package.json
 
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
-    PORT=4321
+    PORT=4321 \
+    APP_VERSION=${APP_VERSION}
 
 USER node
 
