@@ -1,164 +1,155 @@
 ---
 import StageMarker from '../StageMarker/StageMarker.astro';
+import { getLinkedInExperience, type LinkedInExperience } from '../../lib/linkedin';
 import './Experience.css';
+
+const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+const dateOrder = (value: string | null) => {
+  const text = value?.trim() ?? '';
+  const numeric = /^(\d{4})(?:-(\d{2})(?:-\d{2})?)?$/.exec(text);
+  if (numeric) {
+    const month = Number(numeric[2] ?? 1);
+    return month >= 1 && month <= 12 ? Number(numeric[1]) * 12 + month : 0;
+  }
+  const named = /^([a-z]{3})\s+(\d{4})$/i.exec(text);
+  const month = named ? months.indexOf(named[1].toLowerCase()) : -1;
+  return named && month >= 0 ? Number(named[2]) * 12 + month + 1 : 0;
+};
+
+const isCurrent = (item: LinkedInExperience) =>
+  Boolean(item.start_date?.trim())
+  && (!item.end_date?.trim() || /^(present|current)$/i.test(item.end_date.trim()));
+
+let entries: LinkedInExperience[] = [];
+let loadError = false;
+
+try {
+  const items = await getLinkedInExperience();
+  entries = items.filter((item) =>
+    [item.title, item.company_name, item.description].some((value) => value?.trim())
+  );
+  entries.sort(
+    (first, second) =>
+      Number(isCurrent(second)) - Number(isCurrent(first))
+      || dateOrder(second.start_date) - dateOrder(first.start_date)
+  );
+} catch {
+  loadError = true;
+}
 ---
 
 <section class="experience" data-experience data-stage>
   <StageMarker name="experience" />
   <div class="experience-content">
-    <p class="experience-status" data-experience-status role="status" hidden></p>
-    <button class="experience-retry" data-experience-retry type="button" hidden>Try again</button>
-    <ol class="experience-timeline" data-experience-list role="list" hidden></ol>
-    <noscript>
-      <p class="experience-status">Please enable JavaScript to view my work experience.</p>
-    </noscript>
-  </div>
+    {loadError ? (
+      <>
+        <p class="experience-status" data-experience-status role="status">
+          My work experience is temporarily unavailable. Please try again later.
+        </p>
+        <button class="experience-retry" data-experience-retry type="button">Try again</button>
+      </>
+    ) : entries.length === 0 ? (
+      <p class="experience-status" data-experience-status role="status">
+        No work experience published yet.
+      </p>
+    ) : (
+      <ol class="experience-timeline" data-experience-list role="list">
+        {entries.map((item) => {
+          const current = isCurrent(item);
+          const title = item.title?.trim();
+          const companyName = item.company_name?.trim();
+          const text = item.description?.trim() ?? '';
+          const datesText = [item.start_date?.trim(), current ? 'Present' : item.end_date?.trim()]
+            .filter(Boolean)
+            .join(' — ');
+          const roleText = title || companyName || 'Professional experience';
+          const companyText = [title ? companyName : null, item.location?.trim()]
+            .filter(Boolean)
+            .join(' · ');
 
-  <template data-experience-row>
-    <li class="experience-entry" data-expanded="false">
-      <div class="experience-period">
-        <p class="experience-dates" data-experience-dates></p>
-        <span class="experience-current" data-experience-current hidden>Current</span>
-      </div>
-      <div class="experience-info">
-        <h3>
-          <button class="experience-heading" type="button" data-experience-heading>
-            <span data-experience-role></span>
-            <span class="experience-heading-icon" data-experience-chevron hidden>
-              <svg class="experience-chevron" width="16" height="16" viewBox="0 0 24 24">
-                <path d="m6 9 6 6 6-6" />
-              </svg>
-            </span>
-          </button>
-        </h3>
-        <p class="experience-company" data-experience-company></p>
-        <div class="experience-reveal" data-experience-reveal hidden>
-          <div class="experience-reveal-inner">
-            <p class="experience-description" data-experience-description></p>
-          </div>
-        </div>
-      </div>
-    </li>
-  </template>
+          return (
+            <li class="experience-entry" data-expanded="false" data-current={String(current)}>
+              <div class="experience-period">
+                {datesText && <p class="experience-dates" data-experience-dates>{datesText}</p>}
+                {current && <span class="experience-current" data-experience-current>Current</span>}
+              </div>
+              <div class="experience-info">
+                <h3>
+                  <button
+                    class="experience-heading"
+                    type="button"
+                    data-experience-heading
+                    disabled={!text}
+                  >
+                    <span data-experience-role>{roleText}</span>
+                    {text && (
+                      <span class="experience-heading-icon" data-experience-chevron>
+                        <svg class="experience-chevron" width="16" height="16" viewBox="0 0 24 24">
+                          <path d="m6 9 6 6 6-6" />
+                        </svg>
+                      </span>
+                    )}
+                  </button>
+                </h3>
+                {companyText && <p class="experience-company" data-experience-company>{companyText}</p>}
+                {text && (
+                  <div class="experience-reveal" data-experience-reveal inert>
+                    <div class="experience-reveal-inner">
+                      <p class="experience-description" data-experience-description>{text}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    )}
+  </div>
 </section>
 
 <script>
-  import { getLinkedInExperience, type LinkedInExperience } from '../../lib/linkedin';
-
   const section = document.querySelector<HTMLElement>('[data-experience]');
-  const list = section?.querySelector<HTMLOListElement>('[data-experience-list]');
-  const status = section?.querySelector<HTMLElement>('[data-experience-status]');
   const retry = section?.querySelector<HTMLButtonElement>('[data-experience-retry]');
-  const template = section?.querySelector<HTMLTemplateElement>('[data-experience-row]');
 
-  if (section && list && status && retry && template) {
-    const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-    let loading = false;
+  retry?.addEventListener('click', () => {
+    window.location.reload();
+  });
 
-    const dateOrder = (value: string | null) => {
-      const text = value?.trim() ?? '';
-      const numeric = /^(\d{4})(?:-(\d{2})(?:-\d{2})?)?$/.exec(text);
-      if (numeric) {
-        const month = Number(numeric[2] ?? 1);
-        return month >= 1 && month <= 12 ? Number(numeric[1]) * 12 + month : 0;
+  section?.querySelectorAll<HTMLElement>('.experience-entry').forEach((entry) => {
+    const heading = entry.querySelector<HTMLButtonElement>('[data-experience-heading]');
+    const reveal = entry.querySelector<HTMLElement>('[data-experience-reveal]');
+
+    if (!heading || !reveal) return;
+
+    let pointerType = '';
+    const setExpanded = (expanded: boolean) => {
+      entry.dataset.expanded = String(expanded);
+      reveal.inert = !expanded;
+    };
+
+    entry.addEventListener('pointerenter', (event) => {
+      if (event.pointerType === 'mouse') setExpanded(true);
+    });
+    entry.addEventListener('pointerleave', (event) => {
+      if (event.pointerType === 'mouse' && !heading.matches(':focus-visible')) setExpanded(false);
+    });
+    heading.addEventListener('pointerdown', (event) => {
+      pointerType = event.pointerType;
+    });
+    heading.addEventListener('click', (event) => {
+      if (event.detail === 0 || pointerType !== 'mouse') {
+        setExpanded(entry.dataset.expanded !== 'true');
       }
-      const named = /^([a-z]{3})\s+(\d{4})$/i.exec(text);
-      const month = named ? months.indexOf(named[1].toLowerCase()) : -1;
-      return named && month >= 0 ? Number(named[2]) * 12 + month + 1 : 0;
-    };
-
-    const isCurrent = (item: LinkedInExperience) => Boolean(item.start_date?.trim())
-      && (!item.end_date?.trim() || /^(present|current)$/i.test(item.end_date.trim()));
-
-    const renderExperience = (items: LinkedInExperience[]) => {
-      const entries = items.filter((item) => [item.title, item.company_name, item.description].some((value) => value?.trim()));
-      entries.sort((first, second) => Number(isCurrent(second)) - Number(isCurrent(first))
-        || dateOrder(second.start_date) - dateOrder(first.start_date));
-
-      const rows = entries.map((item) => {
-        const row = template.content.cloneNode(true) as DocumentFragment;
-        const entry = row.querySelector<HTMLElement>('.experience-entry');
-        const dates = row.querySelector<HTMLElement>('[data-experience-dates]');
-        const badge = row.querySelector<HTMLElement>('[data-experience-current]');
-        const role = row.querySelector<HTMLElement>('[data-experience-role]');
-        const company = row.querySelector<HTMLElement>('[data-experience-company]');
-        const description = row.querySelector<HTMLElement>('[data-experience-description]');
-        const reveal = row.querySelector<HTMLElement>('[data-experience-reveal]');
-        const heading = row.querySelector<HTMLButtonElement>('[data-experience-heading]');
-        const chevron = row.querySelector<HTMLElement>('[data-experience-chevron]');
-        const current = isCurrent(item);
-        const title = item.title?.trim();
-        const companyName = item.company_name?.trim();
-        const text = item.description?.trim() ?? '';
-
-        if (entry) entry.dataset.current = String(current);
-        if (dates) {
-          dates.textContent = [item.start_date?.trim(), current ? 'Present' : item.end_date?.trim()].filter(Boolean).join(' — ');
-          dates.hidden = !dates.textContent;
-        }
-        if (badge) badge.hidden = !current;
-        if (role) role.textContent = title || companyName || 'Professional experience';
-        if (company) {
-          company.textContent = [title ? companyName : null, item.location?.trim()].filter(Boolean).join(' · ');
-          company.hidden = !company.textContent;
-        }
-        if (description) {
-          description.textContent = text;
-        }
-        if (reveal) reveal.hidden = !text;
-        if (chevron) chevron.hidden = !text;
-        if (heading) heading.disabled = !text;
-
-        if (entry && heading && reveal && text) {
-          let pointerType = '';
-          const setExpanded = (expanded: boolean) => {
-            entry.dataset.expanded = String(expanded);
-            reveal.inert = !expanded;
-          };
-          setExpanded(false);
-          entry.addEventListener('pointerenter', (event) => {
-            if (event.pointerType === 'mouse') setExpanded(true);
-          });
-          entry.addEventListener('pointerleave', (event) => {
-            if (event.pointerType === 'mouse' && !heading.matches(':focus-visible')) setExpanded(false);
-          });
-          heading.addEventListener('pointerdown', (event) => { pointerType = event.pointerType; });
-          heading.addEventListener('click', (event) => {
-            if (event.detail === 0 || pointerType !== 'mouse') {
-              setExpanded(entry.dataset.expanded !== 'true');
-            }
-          });
-          entry.addEventListener('focusout', (event) => {
-            if (!(event.relatedTarget instanceof Node && entry.contains(event.relatedTarget)) && !entry.matches(':hover')) {
-              setExpanded(false);
-            }
-          });
-        }
-        return row;
-      });
-      list.replaceChildren(...rows);
-      list.hidden = rows.length === 0;
-      status.textContent = rows.length === 0 ? 'No work experience published yet.' : '';
-      status.hidden = rows.length > 0;
-    };
-
-    const loadExperience = async () => {
-      if (loading) return;
-      loading = true;
-      status.textContent = 'Loading experience…';
-      status.hidden = false;
-      retry.hidden = true;
-      try {
-        renderExperience(await getLinkedInExperience());
-      } catch {
-        status.textContent = 'My work experience is temporarily unavailable. Please try again later.';
-        retry.hidden = false;
-      } finally {
-        loading = false;
+    });
+    entry.addEventListener('focusout', (event) => {
+      if (
+        !(event.relatedTarget instanceof Node && entry.contains(event.relatedTarget))
+        && !entry.matches(':hover')
+      ) {
+        setExpanded(false);
       }
-    };
-
-    retry.addEventListener('click', () => { void loadExperience(); });
-    void loadExperience();
-  }
+    });
+  });
 </script>

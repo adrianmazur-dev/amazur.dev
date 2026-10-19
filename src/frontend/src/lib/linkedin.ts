@@ -1,3 +1,5 @@
+import { settings } from './config';
+
 export interface LinkedInProfile {
   first_name: string | null;
   last_name: string | null;
@@ -33,10 +35,10 @@ function isLinkedInProfile(value: unknown): value is LinkedInProfile {
 }
 
 export async function getLinkedInProfile(): Promise<LinkedInProfile> {
-  const response = await fetch('/linkedin/profile', {
+  const response = await fetch(`${settings.backendUrl}/linkedin/profile`, {
     headers: { Accept: 'application/json' },
     cache: 'no-store',
-    signal: AbortSignal.timeout(10000),
+    signal: AbortSignal.timeout(settings.linkedinTimeoutMs),
   });
   if (!response.ok) throw new Error(`Profile request failed: ${response.status}`);
 
@@ -46,10 +48,10 @@ export async function getLinkedInProfile(): Promise<LinkedInProfile> {
 }
 
 export async function getLinkedInExperience(): Promise<LinkedInExperience[]> {
-  const response = await fetch('/linkedin/experience', {
+  const response = await fetch(`${settings.backendUrl}/linkedin/experience`, {
     headers: { Accept: 'application/json' },
     cache: 'no-store',
-    signal: AbortSignal.timeout(10000),
+    signal: AbortSignal.timeout(settings.linkedinTimeoutMs),
   });
   if (!response.ok) throw new Error(`Experience request failed: ${response.status}`);
 

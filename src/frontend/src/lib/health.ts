@@ -1,3 +1,5 @@
+import { settings } from './config';
+
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 export interface HealthCheck {
@@ -26,10 +28,10 @@ function isHealthStatus(value: unknown): value is HealthStatus {
 }
 
 export async function getHealthStatus(): Promise<HealthStatus> {
-  const response = await fetch('/health', {
+  const response = await fetch(`${settings.backendUrl}/health`, {
     headers: { Accept: 'application/json' },
     cache: 'no-store',
-    signal: AbortSignal.timeout(20000),
+    signal: AbortSignal.timeout(settings.healthTimeoutMs),
   });
   if (!response.ok && response.status !== 503) throw new Error(`Health request failed: ${response.status}`);
 

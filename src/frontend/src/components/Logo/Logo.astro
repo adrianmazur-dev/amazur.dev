@@ -67,7 +67,8 @@ import './Logo.css';
 </div>
 
 <script>
-  import { getHealthStatus, type HealthStatus } from '../../lib/health';
+  import { actions } from 'astro:actions';
+  import type { HealthStatus } from '../../lib/health';
 
   const widget = document.querySelector<HTMLElement>('[data-health-widget]');
   const trigger = widget?.querySelector<HTMLButtonElement>('[data-intro-logo]');
@@ -190,7 +191,9 @@ import './Logo.css';
       refresh.dataset.loading = 'true';
       requestPosition();
       try {
-        renderChecks(await getHealthStatus());
+        const { data, error } = await actions.getHealth();
+        if (error || !data) throw error ?? new Error('Health action failed');
+        renderChecks(data);
         const time = new Intl.DateTimeFormat('en', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date());
         updated.textContent = time;
       } catch {

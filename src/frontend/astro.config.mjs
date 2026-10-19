@@ -1,21 +1,16 @@
 import { defineConfig } from 'astro/config';
+import node from '@astrojs/node';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
+  output: 'server',
+  adapter: node({
+    mode: 'standalone',
+  }),
+  security: {
+    checkOrigin: false,
+  },
   vite: {
     plugins: [tailwindcss()],
-    server: {
-      proxy: {
-        '/health': {
-          target: 'http://127.0.0.1:8000',
-        },
-        '/linkedin/profile': {
-          target: 'http://127.0.0.1:8000',
-        },
-        '/linkedin/experience': {
-          target: 'http://127.0.0.1:8000',
-        },
-      },
-    },
   },
 });
