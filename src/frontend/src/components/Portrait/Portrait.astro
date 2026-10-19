@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import './Portrait.css';
 
 const portrait = ['portrait.webp', 'portrait.jpg', 'portrait.jpeg', 'portrait.png', 'portrait.avif']
-  .find((filename) => existsSync(`public/assets/${filename}`));
+  .find((filename) => existsSync(`public/assets/${filename}`) || existsSync(`dist/client/assets/${filename}`));
 ---
 
 <figure class="about-portrait">
