@@ -1,0 +1,13 @@
+{
+    "explorer.fileNesting.enabled": true,
+    "explorer.fileNesting.patterns": {
+        "pyproject.toml": "README.md, ty.toml, ruff.toml, uv.lock, .python-version",
+        "Dockerfile": ".dockerignore"
+    },
+    "files.exclude": {
+        "**/.coverage": true,
+        "**/dist": true,
+        "**/*_cache": true,
+        "**/__pycache__": true,
+    }
+}

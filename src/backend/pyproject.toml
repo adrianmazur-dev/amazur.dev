@@ -1,5 +1,18 @@
+[tool.uv]
+package = true
+
+[project.scripts]
+dev = "main:dev"
+
 [project]
 name = "amazur-backend"
 version = "0.1.0"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "litestar[standard]>=2.25.0",
+    "sqlalchemy>=2.1.5",
+    "structlog>=26.1.0",
+]
+
+[dependency-groups]
+dev = ["ruff>=0.17.1", "ty>=0.0.89"]

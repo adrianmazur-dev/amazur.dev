@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Litestar App",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "litestar",
+            "justMyCode": true,
+            "args": [
+                "run"
+            ]
+        }
+    ]
+}

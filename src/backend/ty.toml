@@ -1,0 +1,14 @@
+[environment]
+python-version = "3.14"
+root = ["src"]
+
+[src]
+include = ["src/**/*.py", "tests/**/*.py"]
+
+[rules]
+unresolved-import = "error"
+possibly-missing-import = "error"
+unused-ignore-comment = "warn"
+invalid-assignment = "warn"
+invalid-argument-type = "warn"
+not-subscriptable = "error"
