@@ -1,0 +1,134 @@
+---
+import './Intro.css';
+---
+
+<section class="intro" data-stage>
+  <img
+    class="intro-logo"
+    src="/assets/logo.svg"
+    width="427"
+    height="208"
+    loading="eager"
+    fetchpriority="high"
+    draggable="false"
+    data-intro-logo
+  />
+</section>
+
+<script>
+  import { getStageTarget } from '../../lib/stages';
+
+  const logo = document.querySelector<HTMLImageElement>('[data-intro-logo]');
+  const about = document.querySelector<HTMLElement>('[data-about]');
+  const stages = [...document.querySelectorAll<HTMLElement>('[data-stage]')];
+
+  if (logo) {
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const transitionDuration = 1200;
+    let frame: number | null = null;
+    let transitionTarget: number | null = null;
+    let transitionFrame: number | null = null;
+    let gestureTimeout: number | undefined;
+    let gestureConsumed = false;
+
+    const finishTransition = () => {
+      if (transitionFrame !== null) window.cancelAnimationFrame(transitionFrame);
+      transitionFrame = null;
+      transitionTarget = null;
+      document.documentElement.classList.remove('is-stage-transitioning');
+    };
+
+    const goToStage = (top: number) => {
+      finishTransition();
+      if (reducedMotion.matches) {
+        window.scrollTo({ top, behavior: 'instant' });
+        return;
+      }
+
+      const startY = window.scrollY;
+      let startTime: number | null = null;
+      transitionTarget = top;
+      document.documentElement.classList.add('is-stage-transitioning');
+
+      const animate = (timestamp: number) => {
+        startTime ??= timestamp;
+        const progress = Math.min(1, (timestamp - startTime) / transitionDuration);
+        const easedProgress = progress * progress * (3 - 2 * progress);
+
+        window.scrollTo({ top: startY + (top - startY) * easedProgress, behavior: 'instant' });
+
+        if (progress < 1) {
+          transitionFrame = window.requestAnimationFrame(animate);
+        } else {
+          finishTransition();
+        }
+      };
+
+      transitionFrame = window.requestAnimationFrame(animate);
+    };
+
+    const consumeGesture = () => {
+      gestureConsumed = true;
+      window.clearTimeout(gestureTimeout);
+      gestureTimeout = window.setTimeout(() => { gestureConsumed = false; }, 200);
+    };
+
+    const handleWheel = (event: WheelEvent) => {
+      if (!about || reducedMotion.matches || event.ctrlKey || !event.cancelable
+        || event.deltaY === 0 || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+
+      if (transitionTarget !== null || gestureConsumed) {
+        event.preventDefault();
+        consumeGesture();
+        return;
+      }
+
+      const target = getStageTarget(window.scrollY, event.deltaY, window.innerHeight,
+        stages.map((stage) => ({ top: stage.offsetTop, height: stage.offsetHeight })));
+      if (target !== null) {
+        event.preventDefault();
+        consumeGesture();
+        goToStage(target);
+      }
+    };
+
+    const updateLogo = () => {
+      frame = null;
+
+      const viewportHeight = window.innerHeight;
+      const logoWidth = logo.offsetWidth;
+      const logoHeight = logo.offsetHeight;
+      const progress = reducedMotion.matches
+        ? 1
+        : Math.min(1, Math.max(0, window.scrollY / (Math.max(1, about?.offsetTop ?? viewportHeight) * 0.85)));
+      const easedProgress = progress * progress * (3 - 2 * progress);
+      const startY = (viewportHeight - logoHeight) / 2;
+      const endY = window.innerWidth < 640 ? 24 : 32;
+      const endWidth = window.innerWidth < 640 ? 108 : 132;
+      const endScale = Math.min(1, endWidth / logoWidth);
+      const revealProgress = Math.min(1, Math.max(0, (progress - 0.35) / 0.65));
+
+      logo.style.setProperty('--logo-y', `${startY + (endY - startY) * easedProgress}px`);
+      logo.style.setProperty('--logo-scale', `${1 + (endScale - 1) * easedProgress}`);
+      about?.style.setProperty('--about-opacity', `${revealProgress}`);
+      about?.style.setProperty('--about-offset', `${(1 - revealProgress) * 32}px`);
+    };
+
+    const requestUpdate = () => {
+      if (frame === null) frame = window.requestAnimationFrame(updateLogo);
+    };
+
+    window.addEventListener('scroll', requestUpdate, { passive: true });
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    window.addEventListener('resize', () => {
+      finishTransition();
+      requestUpdate();
+    });
+    window.addEventListener('pageshow', requestUpdate);
+    reducedMotion.addEventListener('change', () => {
+      if (reducedMotion.matches) finishTransition();
+      requestUpdate();
+    });
+    updateLogo();
+  }
+</script>

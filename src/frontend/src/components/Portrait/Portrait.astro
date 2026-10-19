@@ -1,0 +1,25 @@
+---
+import { existsSync } from 'node:fs';
+import './Portrait.css';
+
+const portrait = ['portrait.webp', 'portrait.jpg', 'portrait.jpeg', 'portrait.png', 'portrait.avif']
+  .find((filename) => existsSync(`public/assets/${filename}`));
+---
+
+<figure class="about-portrait">
+  {portrait ? (
+    <img
+      src={`/assets/${portrait}`}
+      width="800"
+      height="1000"
+      decoding="async"
+    />
+  ) : (
+    <div class="portrait-placeholder">
+      <svg viewBox="0 0 160 200" fill="none">
+        <circle cx="80" cy="62" r="33" />
+        <path d="M20 181v-18a60 60 0 0 1 120 0v18" />
+      </svg>
+    </div>
+  )}
+</figure>

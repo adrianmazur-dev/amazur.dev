@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  background: #242729;
+  color: #faf9f6;
+  scroll-snap-type: y mandatory;
+}
+
+:root.is-stage-transitioning {
+  scroll-snap-type: none;
+}
+
+body {
+  margin: 0;
+}
+
+[data-stage] {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    scroll-snap-type: none;
+  }
+}
