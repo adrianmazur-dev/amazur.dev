@@ -7,7 +7,9 @@ name = "amazur-backend"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "httpx" },
     { name = "litestar", extra = ["standard"] },
+    { name = "python-dotenv" },
     { name = "sqlalchemy" },
     { name = "structlog" },
 ]
@@ -20,7 +22,9 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "litestar", extras = ["standard"], specifier = ">=2.25.0" },
+    { name = "python-dotenv", specifier = ">=1.2.4" },
     { name = "sqlalchemy", specifier = ">=2.1.5" },
     { name = "structlog", specifier = ">=26.1.0" },
 ]

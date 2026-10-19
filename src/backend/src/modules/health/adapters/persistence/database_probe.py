@@ -3,10 +3,12 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
 
+from modules.health.application.ports.database_probe import DatabaseProbe
+
 logger = structlog.get_logger(__name__)
 
 
-class SqlAlchemyDatabaseProbe:
+class SqlAlchemyDatabaseProbe(DatabaseProbe):
     def __init__(self, engine: Engine):
         self.engine = engine
 

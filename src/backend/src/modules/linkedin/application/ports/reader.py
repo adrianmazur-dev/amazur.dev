@@ -1,0 +1,13 @@
+from typing import Protocol
+
+from modules.linkedin.domain.profile import Certification, Education, Experience, LinkedInProfile
+
+
+class LinkedInReader(Protocol):
+    async def get_profile(self) -> LinkedInProfile | None: ...
+
+    async def get_experience(self) -> list[Experience]: ...
+
+    async def get_education(self) -> list[Education]: ...
+
+    async def get_certifications(self) -> list[Certification]: ...

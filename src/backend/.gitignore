@@ -19,3 +19,7 @@ htmlcov/
 
 # Local environment
 .env
+
+# Local data
+data/
+*.db

@@ -6,9 +6,9 @@ from modules.health.application.use_cases.check_health import CheckHealth
 from modules.health.domain.health import HealthStatus
 
 
-@get(path="/", status_code=200, sync_to_thread=True, return_dto=HealthStatusDTO)
-def readiness(check_health: NamedDependency[CheckHealth]) -> HealthStatus:
-    return check_health.execute()
+@get(path="/", status_code=200, return_dto=HealthStatusDTO)
+async def readiness(check_health: NamedDependency[CheckHealth]) -> HealthStatus:
+    return await check_health.execute()
 
 
 def create_router(check_health: CheckHealth) -> Router:
