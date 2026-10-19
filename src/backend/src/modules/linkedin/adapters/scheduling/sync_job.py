@@ -9,8 +9,10 @@ import structlog
 
 from modules.linkedin.application.errors import LinkedInError
 from modules.linkedin.application.ports.repository import LinkedInRepository
+from modules.linkedin.application.ports.sync_status_reader import LinkedInSyncStatusReader
 from modules.linkedin.application.ports.sync_trigger import LinkedInSyncTrigger
 from modules.linkedin.application.use_cases.sync_linkedin_data import SyncLinkedInData
+from modules.linkedin.domain.sync_status import LinkedInSyncStatus
 
 logger = structlog.get_logger(__name__)
 
@@ -42,12 +44,13 @@ def _scheduled_delay_seconds(synced_at: datetime | None, *, now: datetime) -> fl
     return max(0.0, (synced_at + SYNC_INTERVAL - now).total_seconds())
 
 
-class LinkedInSyncJob(LinkedInSyncTrigger):
+class LinkedInSyncJob(LinkedInSyncTrigger, LinkedInSyncStatusReader):
     def __init__(self, sync: SyncLinkedInData, repository: LinkedInRepository) -> None:
         self._sync = sync
         self._repository = repository
         self._requested = asyncio.Event()
         self._synchronizing = False
+        self._running = False
         self._retry_not_before: float | None = None
 
     def request_sync(self) -> None:
@@ -57,9 +60,25 @@ class LinkedInSyncJob(LinkedInSyncTrigger):
         self._requested.set()
         logger.info("LinkedIn synchronization requested")
 
+    async def get_sync_status(self) -> LinkedInSyncStatus:
+        synced_at = await self._repository.get_synced_at()
+        now = datetime.now(UTC)
+        if not self._running or self._synchronizing:
+            next_sync_at = None
+        elif self._retry_not_before is not None:
+            next_sync_at = now + timedelta(seconds=max(0.0, self._retry_not_before - monotonic()))
+        elif self._requested.is_set():
+            next_sync_at = now
+        else:
+            next_sync_at = now + timedelta(seconds=_scheduled_delay_seconds(synced_at, now=now))
+        return LinkedInSyncStatus(last_synced_at=synced_at, next_sync_at=next_sync_at)
+
     async def run(self) -> None:
-        logger.info("LinkedIn synchronization job started", interval_seconds=SYNC_INTERVAL.total_seconds())
+        if self._running:
+            raise RuntimeError("LinkedIn synchronization job is already running")
+        self._running = True
         try:
+            logger.info("LinkedIn synchronization job started", interval_seconds=SYNC_INTERVAL.total_seconds())
             while True:
                 if self._retry_not_before is not None:
                     remaining = self._retry_not_before - monotonic()
@@ -74,6 +93,7 @@ class LinkedInSyncJob(LinkedInSyncTrigger):
                 with suppress(TimeoutError):
                     await asyncio.wait_for(self._requested.wait(), timeout=delay)
         finally:
+            self._running = False
             self._synchronizing = False
             self._requested.clear()
             logger.info("LinkedIn synchronization job stopped")

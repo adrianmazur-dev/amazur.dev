@@ -33,17 +33,18 @@ def create_app() -> Litestar:
     linkedin_client = httpx.AsyncClient(timeout=settings.linkedin_timeout_seconds)
 
     linkedin_reader = LinkedInApiReader(linkedin_client, settings.linkedin_access_token)
+    linkedin_repository = SqlAlchemyLinkedInRepository(engine)
+    linkedin_data = GetLinkedInData(linkedin_repository)
+    sync_linkedin_data = SyncLinkedInData(linkedin_reader, linkedin_repository)
+    linkedin_sync_job = LinkedInSyncJob(sync_linkedin_data, linkedin_repository)
     linkedin_probe = LinkedInApiProbe(
         linkedin_client,
         client_id=settings.linkedin_client_id,
         client_secret=settings.linkedin_client_secret,
         access_token=settings.linkedin_access_token,
+        sync_status_reader=linkedin_sync_job,
     )
     check_health = CheckHealth(SqlAlchemyDatabaseProbe(engine), linkedin_probe)
-    linkedin_repository = SqlAlchemyLinkedInRepository(engine)
-    linkedin_data = GetLinkedInData(linkedin_repository)
-    sync_linkedin_data = SyncLinkedInData(linkedin_reader, linkedin_repository)
-    linkedin_sync_job = LinkedInSyncJob(sync_linkedin_data, linkedin_repository)
 
     @asynccontextmanager
     async def lifespan(app: Litestar) -> AsyncGenerator[None]:

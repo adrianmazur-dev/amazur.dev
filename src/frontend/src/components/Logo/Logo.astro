@@ -1,0 +1,310 @@
+---
+import './Logo.css';
+---
+
+<div data-health-widget>
+  <button
+    class="intro-logo"
+    type="button"
+    aria-label="Show system status"
+    aria-haspopup="dialog"
+    aria-expanded="false"
+    aria-controls="health-panel"
+    data-intro-logo
+    disabled
+  >
+    <img src="/assets/logo.svg" width="427" height="208" alt="amazur.dev"
+      loading="eager" fetchpriority="high" draggable="false" />
+  </button>
+
+  <aside class="health-panel" id="health-panel" role="dialog" aria-labelledby="health-title" tabindex="-1"
+    data-health-panel hidden>
+    <header class="health-header">
+      <div class="health-header-status">
+        <h2 class="health-eyebrow" id="health-title">Behind the scenes</h2>
+        <div class="health-header-actions">
+          <span data-health-updated role="status">Not checked yet</span>
+          <button class="health-refresh" type="button" aria-label="Refresh service status" title="Refresh service status" data-health-refresh>
+            <svg class="health-icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 11a9 9 0 0 1 15.36-6.36L21 7M21 3v4h-4" />
+              <path d="M21 13a9 9 0 0 1-15.36 6.36L3 17M3 21v-4h4" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <h3 class="health-json-title">DETAILS</h3>
+    </header>
+    <p class="health-message" data-health-message role="status" hidden></p>
+    <div class="health-content">
+      <ul class="health-checks" aria-label="Service checks" tabindex="0" data-health-checks hidden></ul>
+      <section class="health-details" id="health-details" aria-label="JSON" data-health-details>
+        <h3 class="health-json-title health-json-title-mobile">JSON</h3>
+        <pre tabindex="0"><code data-health-details-json></code></pre>
+        <div class="health-details-footer">
+          <span class="health-copy-feedback" data-health-copy-feedback role="status"></span>
+          <button class="health-copy" type="button" aria-label="Copy details JSON" title="Copy details JSON" data-health-copy disabled>
+            <svg class="health-icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="9" y="9" width="12" height="12" rx="2" />
+              <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
+            </svg>
+          </button>
+        </div>
+      </section>
+    </div>
+  </aside>
+
+  <template data-health-row>
+    <li class="health-check">
+      <button class="health-check-heading" type="button" aria-pressed="false" aria-controls="health-details" data-check-trigger>
+        <span class="health-check-name" data-check-name></span>
+        <span class="health-check-status">
+          <svg class="health-icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" />
+            <path class="health-check-success" d="m8 12 3 3 5-6" />
+            <path class="health-check-failure" d="m9 9 6 6m0-6-6 6" />
+          </svg>
+          <span data-check-status></span>
+        </span>
+      </button>
+    </li>
+  </template>
+</div>
+
+<script>
+  import { getHealthStatus, type HealthStatus } from '../../lib/health';
+
+  const widget = document.querySelector<HTMLElement>('[data-health-widget]');
+  const trigger = widget?.querySelector<HTMLButtonElement>('[data-intro-logo]');
+  const panel = widget?.querySelector<HTMLElement>('[data-health-panel]');
+  const message = widget?.querySelector<HTMLElement>('[data-health-message]');
+  const checks = widget?.querySelector<HTMLElement>('[data-health-checks]');
+  const details = widget?.querySelector<HTMLElement>('[data-health-details]');
+  const detailsJson = widget?.querySelector<HTMLElement>('[data-health-details-json]');
+  const copy = widget?.querySelector<HTMLButtonElement>('[data-health-copy]');
+  const copyFeedback = widget?.querySelector<HTMLElement>('[data-health-copy-feedback]');
+  const updated = widget?.querySelector<HTMLElement>('[data-health-updated]');
+  const refresh = widget?.querySelector<HTMLButtonElement>('[data-health-refresh]');
+  const rowTemplate = widget?.querySelector<HTMLTemplateElement>('[data-health-row]');
+  const stages = [...document.querySelectorAll<HTMLElement>('[data-stage]')];
+
+  if (widget && trigger && panel && message && checks && details && detailsJson && copy && copyFeedback && updated && refresh && rowTemplate) {
+    const cacheDuration = 30000;
+    const labels = new Map([['database', 'Database'], ['linkedin', 'LinkedIn']]);
+    let lastFetchedAt = 0;
+    let loading = false;
+    let closeTimer: number | undefined;
+    let detailsTimer: number | undefined;
+    let positionFrame: number | null = null;
+    let selectedName: string | null = null;
+    let selectionVersion = 0;
+
+    const positionPanel = () => {
+      positionFrame = null;
+      if (panel.hidden) return;
+      const margin = 16;
+      const gap = 12;
+      const bounds = trigger.getBoundingClientRect();
+      const width = panel.offsetWidth;
+      const height = panel.offsetHeight;
+      const left = Math.max(margin, (window.innerWidth - width) / 2);
+      let top = bounds.bottom + gap;
+      if (top + height > window.innerHeight - margin && bounds.top - gap - height >= margin) {
+        top = bounds.top - gap - height;
+      }
+      top = Math.max(margin, Math.min(top, window.innerHeight - height - margin));
+      panel.style.left = `${Math.round(left)}px`;
+      panel.style.top = `${Math.round(top)}px`;
+    };
+
+    const requestPosition = () => {
+      if (!panel.hidden && positionFrame === null) positionFrame = window.requestAnimationFrame(positionPanel);
+    };
+
+    const cancelDetailsClose = () => window.clearTimeout(detailsTimer);
+
+    const hideDetails = () => {
+      cancelDetailsClose();
+      selectedName = null;
+      selectionVersion++;
+      detailsJson.textContent = '';
+      copyFeedback.textContent = '';
+      copy.disabled = true;
+      checks.querySelectorAll('[aria-pressed]').forEach((button) => button.setAttribute('aria-pressed', 'false'));
+      requestPosition();
+    };
+
+    const scheduleDetailsClose = () => {
+      cancelDetailsClose();
+      detailsTimer = window.setTimeout(() => {
+        const selected = checks.querySelector('[aria-pressed="true"]');
+        if (selected?.matches(':hover, :focus-visible') || details.matches(':hover') || details.contains(document.activeElement)) return;
+        hideDetails();
+      }, 160);
+    };
+
+    const renderChecks = (health: HealthStatus) => {
+      hideDetails();
+      const rows = health.checks.map((check) => {
+        const row = rowTemplate.content.cloneNode(true) as DocumentFragment;
+        const item = row.querySelector<HTMLElement>('.health-check');
+        const name = row.querySelector<HTMLElement>('[data-check-name]');
+        const state = row.querySelector<HTMLElement>('[data-check-status]');
+        const button = row.querySelector<HTMLButtonElement>('[data-check-trigger]');
+        if (item) item.dataset.available = String(check.available);
+        if (name) name.textContent = labels.get(check.name) ?? check.name;
+        if (state) state.textContent = check.available ? 'Operational' : 'Unavailable';
+        if (button && !check.available) {
+          button.setAttribute('aria-disabled', 'true');
+          button.removeAttribute('aria-pressed');
+          button.removeAttribute('aria-controls');
+        }
+        const showDetails = () => {
+          cancelDetailsClose();
+          if (!check.available) {
+            hideDetails();
+            return;
+          }
+          if (selectedName === check.name) return;
+          selectedName = check.name;
+          selectionVersion++;
+          checks.querySelectorAll('[aria-pressed]').forEach((other) => other.setAttribute('aria-pressed', 'false'));
+          button?.setAttribute('aria-pressed', 'true');
+          detailsJson.textContent = JSON.stringify(check.details ?? {}, null, 2);
+          detailsJson.parentElement?.scrollTo(0, 0);
+          copyFeedback.textContent = '';
+          copy.disabled = false;
+          requestPosition();
+        };
+        button?.addEventListener('pointerenter', (event) => { if (event.pointerType === 'mouse') showDetails(); });
+        button?.addEventListener('focus', showDetails);
+        button?.addEventListener('click', showDetails);
+        button?.addEventListener('pointerleave', (event) => { if (event.pointerType === 'mouse') scheduleDetailsClose(); });
+        button?.addEventListener('focusout', scheduleDetailsClose);
+        return row;
+      });
+      checks.replaceChildren(...rows);
+      checks.hidden = rows.length === 0;
+      message.hidden = rows.length > 0;
+      message.textContent = rows.length === 0 ? 'No service checks reported.' : '';
+    };
+
+    const loadHealth = async (force = false) => {
+      if (trigger.disabled || loading || (!force && Date.now() - lastFetchedAt < cacheDuration)) return;
+      loading = true;
+      panel.setAttribute('aria-busy', 'true');
+      hideDetails();
+      message.textContent = '';
+      message.hidden = true;
+      checks.hidden = true;
+      updated.textContent = 'Checking…';
+      updated.removeAttribute('aria-label');
+      refresh.setAttribute('aria-disabled', 'true');
+      requestPosition();
+      try {
+        renderChecks(await getHealthStatus());
+        const time = new Intl.DateTimeFormat('en', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date());
+        updated.textContent = time;
+        updated.setAttribute('aria-label', `Last checked at ${time}`);
+      } catch {
+        message.textContent = 'Could not check services. Please try again.';
+        message.hidden = false;
+        checks.hidden = true;
+        updated.textContent = 'Check failed';
+        updated.removeAttribute('aria-label');
+      } finally {
+        lastFetchedAt = Date.now();
+        loading = false;
+        panel.setAttribute('aria-busy', 'false');
+        refresh.setAttribute('aria-disabled', 'false');
+        requestPosition();
+      }
+    };
+
+    const cancelClose = () => window.clearTimeout(closeTimer);
+
+    const closePanel = () => {
+      cancelClose();
+      panel.hidden = true;
+      hideDetails();
+      trigger.setAttribute('aria-expanded', 'false');
+      if (positionFrame !== null) window.cancelAnimationFrame(positionFrame);
+      positionFrame = null;
+    };
+
+    const openPanel = () => {
+      if (trigger.disabled) return;
+      cancelClose();
+      panel.hidden = false;
+      trigger.setAttribute('aria-expanded', 'true');
+      positionPanel();
+      void loadHealth();
+    };
+
+    const scheduleClose = () => {
+      cancelClose();
+      closeTimer = window.setTimeout(() => {
+        if (trigger.matches(':hover') || panel.matches(':hover') || widget.contains(document.activeElement)) return;
+        closePanel();
+      }, 200);
+    };
+
+    const updateAvailability = () => {
+      let activeStage = stages[0];
+      for (const stage of stages) {
+        if (window.scrollY >= stage.offsetTop - 2) activeStage = stage;
+      }
+      trigger.disabled = activeStage?.hasAttribute('data-intro') ?? false;
+      if (trigger.disabled) closePanel();
+      else requestPosition();
+    };
+
+    trigger.addEventListener('pointerenter', (event) => { if (event.pointerType === 'mouse') openPanel(); });
+    trigger.addEventListener('pointerleave', scheduleClose);
+    trigger.addEventListener('click', (event) => {
+      if (panel.hidden) {
+        openPanel();
+        if (event.detail === 0) panel.focus({ preventScroll: true });
+      } else {
+        closePanel();
+      }
+    });
+    trigger.addEventListener('focusout', scheduleClose);
+    panel.addEventListener('pointerenter', cancelClose);
+    panel.addEventListener('pointerleave', scheduleClose);
+    panel.addEventListener('focusin', cancelClose);
+    panel.addEventListener('focusout', scheduleClose);
+    details.addEventListener('pointerenter', cancelDetailsClose);
+    details.addEventListener('pointerleave', scheduleDetailsClose);
+    details.addEventListener('focusin', cancelDetailsClose);
+    details.addEventListener('focusout', scheduleDetailsClose);
+    refresh.addEventListener('click', () => { void loadHealth(true); });
+    copy.addEventListener('click', async () => {
+      const version = selectionVersion;
+      const content = detailsJson.textContent ?? '{}';
+      try {
+        await navigator.clipboard.writeText(content);
+        if (version === selectionVersion) copyFeedback.textContent = 'Copied';
+      } catch {
+        if (version === selectionVersion) copyFeedback.textContent = 'Could not copy. Select the JSON to copy it.';
+      }
+    });
+    document.addEventListener('pointerdown', (event) => {
+      if (event.target instanceof Node && !widget.contains(event.target)) closePanel();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !panel.hidden) {
+        const restoreFocus = panel.contains(document.activeElement);
+        closePanel();
+        if (restoreFocus) trigger.focus({ preventScroll: true });
+      }
+    });
+    window.addEventListener('scroll', updateAvailability, { passive: true });
+    window.addEventListener('resize', updateAvailability);
+    window.addEventListener('pageshow', updateAvailability);
+    window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', updateAvailability);
+    new ResizeObserver(requestPosition).observe(panel);
+    const stageObserver = new ResizeObserver(updateAvailability);
+    for (const stage of stages) stageObserver.observe(stage);
+    updateAvailability();
+  }
+</script>

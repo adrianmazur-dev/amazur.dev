@@ -1,5 +1,7 @@
 from typing import Protocol
 
+from modules.health.domain.health import DependencyStatus
+
 
 class DatabaseProbe(Protocol):
-    def is_available(self) -> bool: ...
+    def check(self) -> DependencyStatus: ...

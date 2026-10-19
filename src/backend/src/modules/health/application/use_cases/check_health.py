@@ -2,7 +2,7 @@ import asyncio
 
 from modules.health.application.ports.database_probe import DatabaseProbe
 from modules.health.application.ports.linkedin_probe import LinkedInProbe
-from modules.health.domain.health import DependencyStatus, HealthStatus
+from modules.health.domain.health import HealthStatus
 
 
 class CheckHealth:
@@ -11,19 +11,8 @@ class CheckHealth:
         self.linkedin_probe = linkedin_probe
 
     async def execute(self) -> HealthStatus:
-        database_available, linkedin_available = await asyncio.gather(
-            asyncio.to_thread(self.database_probe.is_available),
-            self.linkedin_probe.is_available(),
+        database_status, linkedin_status = await asyncio.gather(
+            asyncio.to_thread(self.database_probe.check),
+            self.linkedin_probe.check(),
         )
-        return HealthStatus(
-            checks=(
-                DependencyStatus(
-                    "database",
-                    database_available,
-                ),
-                DependencyStatus(
-                    "linkedin",
-                    linkedin_available,
-                ),
-            )
-        )
+        return HealthStatus(checks=(database_status, linkedin_status))

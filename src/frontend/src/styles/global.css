@@ -13,9 +13,11 @@
 
 body {
   margin: 0;
+  counter-reset: stage;
 }
 
 [data-stage] {
+  counter-increment: stage;
   scroll-snap-align: start;
   scroll-snap-stop: always;
 }

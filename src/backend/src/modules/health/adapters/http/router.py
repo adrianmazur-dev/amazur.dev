@@ -19,6 +19,7 @@ def create_router(check_health: CheckHealth) -> Router:
         path="/health",
         tags=["health"],
         route_handlers=[readiness],
+        response_headers={"Cache-Control": "no-store"},
         dependencies={
             "check_health": Provide(
                 provide_check_health,

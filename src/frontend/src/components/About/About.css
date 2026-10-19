@@ -1,8 +1,14 @@
 .about {
   display: grid;
+  grid-template-rows: auto 1fr;
   align-items: center;
+  row-gap: clamp(32px, 4vw, 56px);
   min-height: 100svh;
   padding: 148px clamp(24px, 6vw, 96px) 72px;
+}
+
+.about > .stage-marker {
+  opacity: var(--about-opacity, 1);
 }
 
 .about::before {
@@ -27,13 +33,8 @@
   transform: translateY(var(--about-offset, 0px));
 }
 
-.about-eyebrow {
-  margin: 0 0 28px;
-  color: #b4b7b8;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
+.about-copy {
+  min-width: 0;
 }
 
 .about-copy h2 {
@@ -42,9 +43,10 @@
   font-weight: 500;
   letter-spacing: -0.055em;
   line-height: 1.06;
+  overflow-wrap: anywhere;
 }
 
-.about-copy h2 span {
+.about-copy h2 .about-accent {
   color: #a3aba4;
 }
 
@@ -52,6 +54,7 @@
   margin: 36px 0 12px;
   font-size: clamp(19px, 1.7vw, 23px);
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .about-description {
@@ -61,6 +64,63 @@
   font-size: 16px;
   line-height: 1.8;
   text-wrap: pretty;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.about-details {
+  margin: 28px 0 0;
+}
+
+.about-details:not([hidden]) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 32px;
+}
+
+.about-details > div {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.about-details dt {
+  margin-bottom: 6px;
+  color: #b4b7b8;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.about-details dd {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.about-status {
+  margin: 28px 0 0;
+  color: #b4b7b8;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.about-retry {
+  margin-top: 12px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: #faf9f6;
+  font: inherit;
+  font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.about-retry:focus-visible {
+  outline: 2px solid #a3aba4;
+  outline-offset: 4px;
 }
 
 @media (max-width: 767px) {
@@ -85,6 +145,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .about > .stage-marker {
+    opacity: 1;
+  }
+
   .about-content {
     opacity: 1;
     transform: none;

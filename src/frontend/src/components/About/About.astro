@@ -1,20 +1,91 @@
 ---
 import Portrait from '../Portrait/Portrait.astro';
+import StageMarker from '../StageMarker/StageMarker.astro';
 import './About.css';
 ---
 
-<section class="about" data-about data-stage>
+<section class="about" data-about data-stage aria-labelledby="about-title">
+  <StageMarker name="about" />
   <div class="about-content">
     <div class="about-copy">
-      <p class="about-eyebrow">A little about me</p>
-      <h2>Hi,<br />I'm Adrian<span>.</span></h2>
-      <p class="about-lead">Good to see you here.</p>
-      <p class="about-description">
-        This is my space on the web — a place to share a little about me,
-        my work, and the things that interest me.
-      </p>
+      <h2 id="about-title">Hi,<br />I'm <span data-profile-name>Adrian</span><span class="about-accent">.</span></h2>
+      <p class="about-lead" data-profile-headline hidden></p>
+      <p class="about-description" data-profile-summary hidden></p>
+      <dl class="about-details" data-profile-details hidden>
+        <div data-profile-location-detail hidden>
+          <dt>Location</dt>
+          <dd data-profile-location></dd>
+        </div>
+        <div data-profile-industry-detail hidden>
+          <dt>Industry</dt>
+          <dd data-profile-industry></dd>
+        </div>
+      </dl>
+      <p class="about-status" data-profile-status role="status" hidden></p>
+      <button class="about-retry" data-profile-retry type="button" hidden>Try again</button>
     </div>
 
     <Portrait />
   </div>
 </section>
+
+<script>
+  import { getLinkedInProfile } from '../../lib/linkedin';
+
+  const about = document.querySelector<HTMLElement>('[data-about]');
+
+  if (about) {
+    const name = about.querySelector<HTMLElement>('[data-profile-name]');
+    const status = about.querySelector<HTMLElement>('[data-profile-status]');
+    const retry = about.querySelector<HTMLButtonElement>('[data-profile-retry]');
+    const details = about.querySelector<HTMLElement>('[data-profile-details]');
+    const locationDetail = about.querySelector<HTMLElement>('[data-profile-location-detail]');
+    const industryDetail = about.querySelector<HTMLElement>('[data-profile-industry-detail]');
+
+    const setText = (selector: string, value: string | null) => {
+      const element = about.querySelector<HTMLElement>(selector);
+      const text = value?.trim() ?? '';
+      if (element) {
+        element.textContent = text;
+        element.hidden = !text;
+      }
+      return Boolean(text);
+    };
+
+    const loadProfile = async () => {
+      about.setAttribute('aria-busy', 'true');
+      if (status) {
+        status.textContent = 'Loading profile…';
+        status.hidden = false;
+      }
+      if (retry) retry.hidden = true;
+
+      try {
+        const profile = await getLinkedInProfile();
+        const fullName = [profile.first_name]
+          .map((part) => part?.trim()).filter(Boolean).join(' ');
+        if (name && fullName) name.textContent = fullName;
+
+        setText('[data-profile-headline]', profile.headline);
+        setText('[data-profile-summary]', profile.summary);
+        const hasLocation = setText('[data-profile-location]', profile.location);
+        const hasIndustry = setText('[data-profile-industry]', profile.industry);
+        if (locationDetail) locationDetail.hidden = !hasLocation;
+        if (industryDetail) industryDetail.hidden = !hasIndustry;
+        if (details) details.hidden = !hasLocation && !hasIndustry;
+        if (status) {
+          status.textContent = '';
+          status.hidden = true;
+        }
+      } catch {
+        if (status) status.textContent = 'My profile is temporarily unavailable. Please try again later.';
+        if (retry) retry.hidden = false;
+      } finally {
+        about.setAttribute('aria-busy', 'false');
+      }
+    };
+
+    retry?.addEventListener('click', () => { void loadProfile(); });
+    void loadProfile();
+  }
+</script>

@@ -1,0 +1,38 @@
+.stage-marker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 1120px);
+  margin: 0 auto;
+  color: #8e9892;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+}
+
+.stage-marker-number {
+  color: #c5cdc7;
+  font-variant-numeric: tabular-nums;
+}
+
+.stage-marker-number::before {
+  content: counter(stage, decimal-leading-zero);
+}
+
+.stage-marker::after {
+  content: "";
+  flex: 1;
+  min-width: 0;
+  height: 1px;
+  margin-left: 8px;
+  background: rgb(250 249 246 / 10%);
+}
+
+@media (max-width: 767px) {
+  .stage-marker {
+    max-width: 480px;
+    gap: 8px;
+    font-size: 10px;
+  }
+}

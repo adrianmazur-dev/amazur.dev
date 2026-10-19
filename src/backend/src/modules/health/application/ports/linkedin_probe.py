@@ -1,5 +1,7 @@
 from typing import Protocol
 
+from modules.health.domain.health import DependencyStatus
+
 
 class LinkedInProbe(Protocol):
-    async def is_available(self) -> bool: ...
+    async def check(self) -> DependencyStatus: ...
